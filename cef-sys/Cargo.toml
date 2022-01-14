@@ -1,0 +1,14 @@
+[package]
+name = "cef-sys"
+version = "97.0.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.59"
+anyhow = "1"
+curl = "0.4"
+bzip2 = "0.4"
+tar = "0.4"
+

@@ -1,0 +1,14 @@
+[package]
+name = "cef"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+cef-sys = { path = "../cef-sys" }
+cef-ref-counting = { path = "../cef-ref-counting" }
+anyhow = "1"
+log = "0.4"
+
+[dev-dependencies]
+simplelog = { version = "0.11", features = ["paris"] }
+

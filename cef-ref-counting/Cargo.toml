@@ -1,0 +1,17 @@
+[package]
+name = "cef-ref-counting"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+cef-sys = { path = "../cef-sys" }
+log = "0.4"
+syn = {version = "1", features = ["full", "extra-traits"]}
+quote = "1"
+
+[dev-dependencies]
+env_logger = "0.8"
+
