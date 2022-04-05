@@ -5,7 +5,7 @@ use cef_sys::{
 };
 
 #[ref_count]
-#[derive(RefCount)]
+#[derive(RefCount, Debug)]
 #[allow(unused)]
 pub struct WindowDelegate {
     pub window_delegate: cef_window_delegate_t,
@@ -14,6 +14,10 @@ pub struct WindowDelegate {
 
 impl WindowDelegate {
     pub fn allocate(browser_view: *mut cef_browser_view_t) -> *mut Self {
+        log::debug!(
+            "allocating window delegate with browser view = {:p}",
+            browser_view
+        );
         let window_delegate = WindowDelegate {
             window_delegate: cef_window_delegate_t {
                 base: cef_panel_delegate_t {
@@ -99,16 +103,40 @@ impl WindowDelegate {
         _window: *mut cef_window_t,
     ) -> i32 {
         log::debug!("can_close");
-        let get_browser = (*(*(slf as *mut WindowDelegate)).browser_view).get_browser;
-        if let Some(get_browser) = get_browser {
-            let browser = get_browser((*(slf as *mut WindowDelegate)).browser_view);
-            if browser as usize != 0 {
-                log::debug!("trying to close browser");
-                let host = (*browser).get_host.unwrap()(browser);
-                (*host).try_close_browser.unwrap()(host);
+        return 1;
+
+        let slf = slf as *mut WindowDelegate;
+        log::debug!("slf: {:?}", *slf);
+        let browser_view = (*slf).browser_view;
+        if browser_view as usize != 0 {
+            let get_browser = (*browser_view).get_browser;
+            log::debug!("get_browser = {:?}", get_browser);
+            if let Some(get_browser) = get_browser {
+                let browser = get_browser(browser_view);
+                log::debug!("browser = {:?}", browser);
+                if browser as usize != 0 {
+                    log::debug!("trying to close browser");
+                    let get_host = (*browser).get_host;
+                    log::debug!("get_host = {:?}", get_host);
+                    if let Some(get_host) = get_host {
+                        let host = get_host(browser);
+                        log::debug!("host = {:?}", host);
+                        if host as usize != 0 {
+                            let try_close_browser = (*host).try_close_browser;
+                            log::debug!("try_close_browser = {:?}", try_close_browser);
+                            if let Some(try_close_browser) = try_close_browser {
+                                try_close_browser(host);
+                            }
+                        }
+                    }
+                } else {
+                    log::debug!("can't close browser, there isn't one");
+                }
             } else {
-                log::debug!("can't close browser, there isn't one");
+                log::debug!("get_browser is null?!");
             }
+        } else {
+            log::warn!("browser view is null?!");
         }
         1
     }

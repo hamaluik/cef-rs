@@ -8,6 +8,14 @@ cef-sys = { path = "../cef-sys" }
 cef-ref-counting = { path = "../cef-ref-counting" }
 anyhow = "1"
 log = "0.4"
+base64 = "0.13"
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.35"
+features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+]
 
 [dev-dependencies]
 simplelog = { version = "0.11", features = ["paris"] }

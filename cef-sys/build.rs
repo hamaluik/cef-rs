@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::env;
 use std::path::PathBuf;
 
-fn download_cef() -> Result<()> {
+/*fn download_cef() -> Result<()> {
     #[cfg(target_os = "linux")]
     let url = "https://cef-builds.spotifycdn.com/cef_binary_97.1.2%2Bgb821dc3%2Bchromium-97.0.4692.71_linux64_minimal.tar.bz2";
     #[cfg(target_os = "linux")]
@@ -37,12 +37,13 @@ fn download_cef() -> Result<()> {
         .with_context(|| "Failed to initiate download")?;
 
     Ok(())
-}
+}*/
 
 fn main() -> Result<()> {
     // make sure we have CEF downloaded
     // TODO: check for it being downloaded
-    download_cef().with_context(|| "Failed to download CEF!")?;
+    //download_cef().with_context(|| "Failed to download CEF!")?;
+    // instead for now, make sure that cef's include, Release, and Resources folders are placed in the cef-sys directory
 
     // let us link the proper CEF version depending on what host we're compiling for
     let target_os = env::var("TARGET").expect("target");
@@ -51,6 +52,11 @@ fn main() -> Result<()> {
         _ => "cef",
     };
     println!("cargo:rustc-link-lib={}", cef_lib_name);
+
+    if cfg!(windows) {
+        println!("cargo:rustc-link-lib=cef_sandbox");
+        println!("cargo:rustc-link-lib=delayimp");
+    }
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let cef_lib_path = PathBuf::from(&manifest_dir).join("Release");
@@ -63,6 +69,42 @@ fn main() -> Result<()> {
         .header("wrapper.h")
         .clang_arg(format!("-I{}", manifest_dir))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .allowlist_type("cef_main_args_t")
+        .allowlist_function("cef_execute_process")
+        .allowlist_type("cef_settings_t")
+        .allowlist_function("cef_initialize")
+        .allowlist_function("cef_run_message_loop")
+        .allowlist_function("cef_shutdown")
+        .allowlist_type("cef_string_t")
+        .allowlist_function("cef_string_utf8_to_utf16")
+        .allowlist_type("cef_base_ref_counted_t")
+        .allowlist_type("cef_client_t")
+        .allowlist_type("cef_life_span_handler_t")
+        .allowlist_type("cef_display_handler_t")
+        .allowlist_type("cef_browser_t")
+        .allowlist_function("cef_browser_view_get_for_browser")
+        .allowlist_function("cef_quit_message_loop")
+        .allowlist_type("cef_frame_t")
+        .allowlist_type("cef_load_handler_t")
+        .allowlist_type("cef_app_t")
+        .allowlist_type("cef_browser_process_handler_t")
+        .allowlist_type("cef_browser_settings_t")
+        .allowlist_type("cef_browser_view_delegate_t")
+        .allowlist_type("cef_window_delegate_t")
+        .allowlist_function("cef_browser_view_create")
+        .allowlist_function("cef_window_create_top_level")
+        .allowlist_type("cef_window_delegate_t")
+        .allowlist_type("cef_browser_view_delegate_t")
+        .allowlist_type("cef_view_delegate_t")
+        .allowlist_type("cef_panel_delegate_t")
+        .allowlist_type("cef_size_t")
+        .allowlist_type("cef_render_handler_t")
+        .allowlist_type("cef_text_input_mode_t")
+        .allowlist_function("cef_sandbox_info_create")
+        .allowlist_function("cef_sandbox_info_destroy")
+        .allowlist_function("cef_enable_highdpi_support")
+        .allowlist_function("cef_currently_on")
+        .allowlist_type("cef_thread_id_t")
         .derive_default(true)
         .generate()
         .expect("Can generate CAPI bindings");

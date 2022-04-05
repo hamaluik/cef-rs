@@ -44,14 +44,15 @@ impl LoadHandler {
     }
 
     unsafe extern "C" fn on_load_error(
-        slf: *mut cef_load_handler_t,
-        browser: *mut cef_browser_t,
+        _slf: *mut cef_load_handler_t,
+        _browser: *mut cef_browser_t,
         frame: *mut cef_frame_t,
         error_code: i32,
         error_text: *const cef_string_t,
         failed_url: *const cef_string_t,
     ) {
         log::debug!("on_load_error");
+        crate::require_ui_thread();
         // don't display an error for downloaded files
         if error_code == cef_errorcode_t_ERR_ABORTED {
             return;
@@ -60,9 +61,10 @@ impl LoadHandler {
         let error_text = from_cef_str(error_text);
         let failed_url = from_cef_str(failed_url);
 
-        let html =format!("<html><body bgcolor='white'><h2>Failed to load!</h2><p>Failed to load URL '{}' with error: {} ({}).</p></body></html>", failed_url, error_text, error_code);
-        let html = to_cef_str(html);
+        let html = format!("<html><body bgcolor='white'><h2>Failed to load!</h2><p>Failed to load URL '{}' with error: {} ({}).</p></body></html>", failed_url, error_text, error_code);
+        let uri = format!("data:text/html;base64,{}", base64::encode(html));
+        let uri = to_cef_str(uri);
 
-        // todo!()
+        (*frame).load_url.unwrap()(frame, &uri);
     }
 }

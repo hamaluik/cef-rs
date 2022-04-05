@@ -1,17 +1,18 @@
 use cef_sys::{
     cef_base_ref_counted_t, cef_browser_t, cef_client_t, cef_display_handler_t,
-    cef_life_span_handler_t, cef_load_handler_t,
+    cef_life_span_handler_t, cef_load_handler_t, cef_render_handler_t,
 };
 
 use self::{
     client::Client, display_handler::DisplayHandler, life_span_handler::LifeSpanHandler,
-    load_handler::LoadHandler,
+    load_handler::LoadHandler, render_handler::RenderHandler,
 };
 
 mod client;
 mod display_handler;
 mod life_span_handler;
 mod load_handler;
+mod render_handler;
 
 #[derive(Debug)]
 pub struct Handler {
@@ -19,6 +20,7 @@ pub struct Handler {
     display_handler: *mut DisplayHandler,
     life_span_handler: *mut LifeSpanHandler,
     load_handler: *mut LoadHandler,
+    render_handler: *mut RenderHandler,
     browsers: Vec<*mut cef_browser_t>,
     is_closing: bool,
 }
@@ -30,6 +32,7 @@ impl Handler {
             display_handler: DisplayHandler::allocate(),
             life_span_handler: LifeSpanHandler::allocate(),
             load_handler: LoadHandler::allocate(),
+            render_handler: RenderHandler::allocate(),
             browsers: Vec::new(),
             is_closing: false,
         };
@@ -45,6 +48,7 @@ impl Handler {
             (*self.display_handler).handler = self;
             (*self.life_span_handler).handler = self;
             (*self.load_handler).handler = self;
+            (*self.render_handler).handler = self;
         }
     }
 
@@ -75,6 +79,13 @@ impl Handler {
         }
         self.load_handler as *mut cef_load_handler_t
     }
+
+    pub fn render_handler_ptr(&self) -> *mut cef_render_handler_t {
+        unsafe {
+            RenderHandler::add_ref(self.render_handler as *mut cef_base_ref_counted_t);
+        }
+        self.render_handler as *mut cef_render_handler_t
+    }
 }
 
 impl Drop for Handler {
@@ -102,6 +113,12 @@ impl Drop for Handler {
             let load_handler = self.load_handler as *mut cef_base_ref_counted_t;
             while LoadHandler::has_at_least_one_ref(load_handler) == 1 {
                 LoadHandler::release(load_handler);
+            }
+
+            log::debug!("dropping render_handler");
+            let render_handler = self.render_handler as *mut cef_base_ref_counted_t;
+            while RenderHandler::has_at_least_one_ref(render_handler) == 1 {
+                RenderHandler::release(render_handler);
             }
         }
     }

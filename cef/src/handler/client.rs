@@ -3,7 +3,7 @@ use std::mem::size_of;
 use cef_ref_counting::{ref_count, RefCount};
 use cef_sys::{
     cef_base_ref_counted_t, cef_client_t, cef_display_handler_t, cef_life_span_handler_t,
-    cef_load_handler_t,
+    cef_load_handler_t, cef_render_handler_t,
 };
 
 use crate::handler::Handler;
@@ -41,7 +41,7 @@ impl Client {
                 get_life_span_handler: Some(Self::get_life_span_handler),
                 get_load_handler: Some(Self::get_load_handler),
                 get_print_handler: None,
-                get_render_handler: None,
+                get_render_handler: Some(Self::get_render_handler),
                 get_request_handler: None,
                 on_process_message_received: None,
             },
@@ -55,7 +55,7 @@ impl Client {
 
     unsafe extern "C" fn get_display_handler(slf: *mut cef_client_t) -> *mut cef_display_handler_t {
         let slf = slf as *mut Client;
-        log::debug!("getting display handler");
+        //log::debug!("getting display handler");
         (*((*slf).handler)).display_handler_ptr()
     }
 
@@ -63,13 +63,19 @@ impl Client {
         slf: *mut cef_client_t,
     ) -> *mut cef_life_span_handler_t {
         let slf = slf as *mut Client;
-        log::debug!("getting life_span_handler");
+        //log::debug!("getting life_span_handler");
         (*((*slf).handler)).life_span_handler_ptr()
     }
 
     unsafe extern "C" fn get_load_handler(slf: *mut cef_client_t) -> *mut cef_load_handler_t {
         let slf = slf as *mut Client;
-        log::debug!("getting load_handler");
+        //log::debug!("getting load_handler");
         (*((*slf).handler)).load_handler_ptr()
+    }
+
+    unsafe extern "C" fn get_render_handler(slf: *mut cef_client_t) -> *mut cef_render_handler_t {
+        let slf = slf as *mut Client;
+        //log::debug!("getting render_handler");
+        (*((*slf).handler)).render_handler_ptr()
     }
 }

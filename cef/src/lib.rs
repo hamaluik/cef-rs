@@ -3,13 +3,22 @@ use std::ptr::null_mut;
 use anyhow::{anyhow, Result};
 use application::Application;
 use cef_sys::{
-    cef_execute_process, cef_initialize, cef_log_severity_t_LOGSEVERITY_INFO, cef_main_args_t,
-    cef_run_message_loop, cef_settings_t, cef_shutdown,
+    cef_currently_on, cef_enable_highdpi_support, cef_execute_process, cef_initialize,
+    cef_log_severity_t_LOGSEVERITY_WARNING, cef_main_args_t, cef_run_message_loop,
+    cef_sandbox_info_create, cef_settings_t, cef_shutdown, cef_thread_id_t_TID_UI,
 };
 
 mod application;
 mod cef_strings;
 mod handler;
+
+pub fn require_ui_thread() {
+    unsafe {
+        if cef_currently_on(cef_thread_id_t_TID_UI) == 0 {
+            log::warn!("Not on UI thread!");
+        }
+    }
+}
 
 #[allow(unused)]
 pub struct Cef {
@@ -17,29 +26,58 @@ pub struct Cef {
 }
 
 impl Cef {
-    pub fn initialize() -> Result<Cef> {
+    #[cfg(unix)]
+    fn main_args() -> cef_main_args_t {
         use std::ffi::CString;
         use std::os::raw::{c_char, c_int};
         let args: Vec<CString> = std::env::args().map(|x| CString::new(x).unwrap()).collect();
-        let args: Vec<*mut c_char> = args.iter().map(|x| x.as_ptr() as *mut c_char).collect();
-        let main_args = cef_main_args_t {
-            argc: args.len() as c_int,
-            argv: args.as_ptr() as *mut *mut c_char,
-        };
+        let _args: Vec<*mut c_char> = args.iter().map(|x| x.as_ptr() as *mut c_char).collect();
+        (
+            args,
+            cef_main_args_t {
+                argc: _args.len() as c_int,
+                argv: _args.as_ptr() as *mut *mut c_char,
+            },
+        )
+    }
+
+    #[cfg(windows)]
+    fn main_args() -> ((), cef_main_args_t) {
+        (
+            (),
+            cef_main_args_t {
+                instance: unsafe {
+                    windows::Win32::System::LibraryLoader::GetModuleHandleA(windows::core::PCSTR(
+                        null_mut(),
+                    ))
+                    .0 as *mut cef_sys::HINSTANCE__
+                },
+            },
+        )
+    }
+
+    pub fn initialize() -> Result<Cef> {
+        unsafe {
+            cef_enable_highdpi_support();
+        }
+
+        let sandbox_info = unsafe { cef_sandbox_info_create() };
+
+        let (_args, main_args) = Self::main_args();
 
         // CEF applications have multiple sub-processes that share the same exe. Check for a
         // subprocess, and exit accordingly
-        let exit_code = unsafe { cef_execute_process(&main_args, null_mut(), null_mut()) };
+        let exit_code = unsafe { cef_execute_process(&main_args, null_mut(), sandbox_info) };
         if exit_code >= 0 {
             std::process::exit(exit_code);
         }
 
         let settings = cef_settings_t {
             size: std::mem::size_of::<cef_settings_t>() as u64,
-            no_sandbox: 1,
-            remote_debugging_port: 1721,
-            command_line_args_disabled: 1,
-            log_severity: cef_log_severity_t_LOGSEVERITY_INFO,
+            no_sandbox: 0,
+            remote_debugging_port: 8765,
+            command_line_args_disabled: 0,
+            log_severity: cef_log_severity_t_LOGSEVERITY_WARNING,
             ..Default::default()
         };
 
@@ -50,7 +88,7 @@ impl Cef {
 
         log::debug!("initializing");
         unsafe {
-            if cef_initialize(&main_args, &settings, application.app_ptr(), null_mut()) != 1 {
+            if cef_initialize(&main_args, &settings, application.app_ptr(), sandbox_info) != 1 {
                 return Err(anyhow!("failed to initialize!"));
             }
         }

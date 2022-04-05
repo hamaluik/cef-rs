@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use cef97_sys::cef_base_ref_counted_t;
     use cef_ref_counting::{ref_count, RefCount};
+    use cef_sys::cef_base_ref_counted_t;
 
     #[test]
     fn impls_ref_counting_methods() {

@@ -57,7 +57,10 @@ impl BrowserViewDelegate {
         popup_browser_view: *mut cef_browser_view_t,
         _is_dev_tools: i32,
     ) -> i32 {
-        log::debug!("on_popup_browser_view_created, opening top level window");
+        log::debug!(
+            "on_popup_browser_view_created, opening top level window with view = {:?}",
+            popup_browser_view
+        );
         cef_window_create_top_level(
             WindowDelegate::allocate(popup_browser_view) as *mut cef_window_delegate_t
         );

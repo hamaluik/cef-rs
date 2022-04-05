@@ -69,7 +69,7 @@ impl BrowserProcessHandler {
             BrowserViewDelegate::allocate() as *mut cef_browser_view_delegate_t,
         );
 
-        log::debug!("creating top level window");
+        log::debug!("creating top level window with view = {:?}", browser_view);
         cef_window_create_top_level(
             WindowDelegate::allocate(browser_view) as *mut cef_window_delegate_t
         );

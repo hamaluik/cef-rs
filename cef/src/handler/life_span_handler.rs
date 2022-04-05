@@ -44,6 +44,7 @@ impl LifeSpanHandler {
         browser: *mut cef_browser_t,
     ) {
         log::debug!("on_after_created");
+        crate::require_ui_thread();
         (*((*(slf as *mut LifeSpanHandler)).handler))
             .browsers
             .push(browser);
@@ -54,6 +55,7 @@ impl LifeSpanHandler {
         browser: *mut cef_browser_t,
     ) {
         log::debug!("on_before_close");
+        crate::require_ui_thread();
         for (i, b) in (*((*(slf as *mut LifeSpanHandler)).handler))
             .browsers
             .iter()
@@ -82,6 +84,7 @@ impl LifeSpanHandler {
         _browser: *mut cef_browser_t,
     ) -> i32 {
         log::debug!("do_close");
+        crate::require_ui_thread();
         if (*((*(slf as *mut LifeSpanHandler)).handler)).browsers.len() == 1 {
             log::debug!("only 1 browser remaining, marking closing");
             (*((*(slf as *mut LifeSpanHandler)).handler)).is_closing = true;
