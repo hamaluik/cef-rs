@@ -100,14 +100,20 @@ fn main() -> Result<()> {
         .allowlist_type("cef_size_t")
         .allowlist_type("cef_render_handler_t")
         .allowlist_type("cef_text_input_mode_t")
-        .allowlist_function("cef_sandbox_info_create")
-        .allowlist_function("cef_sandbox_info_destroy")
         .allowlist_function("cef_enable_highdpi_support")
         .allowlist_function("cef_currently_on")
         .allowlist_type("cef_thread_id_t")
-        .derive_default(true)
-        .generate()
-        .expect("Can generate CAPI bindings");
+        .derive_default(true);
+
+    let bindings = if cfg!(windows) {
+        bindings
+            .header("wrapper-win.h")
+            .allowlist_function("cef_sandbox_info_create")
+            .allowlist_function("cef_sandbox_info_destroy")
+    } else {
+        bindings
+    };
+    let bindings = bindings.generate().expect("Can generate CAPI bindings");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings

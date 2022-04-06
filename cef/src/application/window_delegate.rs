@@ -103,7 +103,6 @@ impl WindowDelegate {
         _window: *mut cef_window_t,
     ) -> i32 {
         log::debug!("can_close");
-        return 1;
 
         let slf = slf as *mut WindowDelegate;
         log::debug!("slf: {:?}", *slf);

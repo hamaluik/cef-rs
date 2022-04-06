@@ -4,8 +4,8 @@ use anyhow::{anyhow, Result};
 use application::Application;
 use cef_sys::{
     cef_currently_on, cef_enable_highdpi_support, cef_execute_process, cef_initialize,
-    cef_log_severity_t_LOGSEVERITY_WARNING, cef_main_args_t, cef_run_message_loop,
-    cef_sandbox_info_create, cef_settings_t, cef_shutdown, cef_thread_id_t_TID_UI,
+    cef_log_severity_t_LOGSEVERITY_WARNING, cef_main_args_t, cef_run_message_loop, cef_settings_t,
+    cef_shutdown, cef_thread_id_t_TID_UI,
 };
 
 mod application;
@@ -27,7 +27,7 @@ pub struct Cef {
 
 impl Cef {
     #[cfg(unix)]
-    fn main_args() -> cef_main_args_t {
+    fn main_args() -> (Vec<std::ffi::CString>, cef_main_args_t) {
         use std::ffi::CString;
         use std::os::raw::{c_char, c_int};
         let args: Vec<CString> = std::env::args().map(|x| CString::new(x).unwrap()).collect();
@@ -56,13 +56,22 @@ impl Cef {
         )
     }
 
+    #[cfg(unix)]
+    fn sandbox() -> *mut ::std::os::raw::c_void {
+        null_mut()
+    }
+
+    #[cfg(windows)]
+    fn sandbox() -> *mut ::std::os::raw::c_void {
+        unsafe { cef_sys::cef_sandbox_info_create() }
+    }
+
     pub fn initialize() -> Result<Cef> {
         unsafe {
             cef_enable_highdpi_support();
         }
 
-        let sandbox_info = unsafe { cef_sandbox_info_create() };
-
+        let sandbox_info = Self::sandbox();
         let (_args, main_args) = Self::main_args();
 
         // CEF applications have multiple sub-processes that share the same exe. Check for a
@@ -74,7 +83,7 @@ impl Cef {
 
         let settings = cef_settings_t {
             size: std::mem::size_of::<cef_settings_t>() as u64,
-            no_sandbox: 0,
+            no_sandbox: if cfg!(windows) { 0 } else { 1 },
             remote_debugging_port: 8765,
             command_line_args_disabled: 0,
             log_severity: cef_log_severity_t_LOGSEVERITY_WARNING,
